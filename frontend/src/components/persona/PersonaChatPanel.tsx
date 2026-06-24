@@ -1,10 +1,6 @@
 // 适配人格的对话面板：5 步对话流 + 打字机动画 + 接受/拒绝交互
-// 关键增强：
-//  1. 自动从 products 库选一个跟 persona 强匹配的真实产品
-//  2. 完成后用户能「接受」或「拒绝」
-//  3. 拒绝后展示 Agent 的 ifRejected 应对策略
 import { useEffect, useState, useMemo } from 'react'
-import { Bot, User as UserIcon, Sparkles, RefreshCw, Pause, Play, ThumbsUp, ThumbsDown, Lightbulb, X, Heart, Clock } from 'lucide-react'
+import { Bot, User as UserIcon, RefreshCw, Pause, Play, ThumbsUp, ThumbsDown, Lightbulb, X, Heart, Clock } from 'lucide-react'
 import type { PersonaProfile } from '../../data/personaProfiles'
 import { getPersonaConversation } from '../../data/personaConversations'
 import { PRODUCTS, type Product } from '../../data/products'
@@ -50,7 +46,6 @@ export function PersonaChatPanel({ persona }: PersonaChatPanelProps) {
     { speaker: 'agent', text: fillTemplate(conv.closing) },
   ]
 
-  // 打字机
   useEffect(() => {
     if (!playing || phase !== 'chatting') return
     if (step >= flow.length) {
@@ -72,7 +67,6 @@ export function PersonaChatPanel({ persona }: PersonaChatPanelProps) {
     }
   }, [step, typedText, playing, phase, flow, seed])
 
-  // 启动对话
   useEffect(() => {
     if (phase === 'idle') {
       const t = setTimeout(() => setPhase('chatting'), 200)
@@ -93,16 +87,12 @@ export function PersonaChatPanel({ persona }: PersonaChatPanelProps) {
 
   return (
     <div className="panel-surface flex h-full flex-col overflow-hidden rounded-xl">
-      {/* 头部：人格信息 */}
-      <div className="flex items-center gap-3 border-b border-white/[0.05] px-5 py-3.5">
+      {/* 头部：人格 + 控制 */}
+      <div className="flex items-center gap-3 border-b border-white/[0.05] px-5 py-3">
         <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-tech/40 to-tech-neon/40 text-sm font-bold text-tech-light">
           {persona.name[0]}
-          {(phase === 'accepted' || phase === 'completed') && (
-            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-ink-850 bg-accent-success" />
-          )}
-          {phase === 'rejected' && (
-            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-ink-850 bg-accent-warning" />
-          )}
+          {phase === 'accepted' && <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-ink-850 bg-accent-success" />}
+          {phase === 'rejected' && <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-ink-850 bg-accent-warning" />}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
@@ -111,23 +101,8 @@ export function PersonaChatPanel({ persona }: PersonaChatPanelProps) {
               {persona.archetype}
             </span>
           </div>
-          <div className="flex items-center gap-1 text-[10px] text-ink-300">
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${
-                phase === 'accepted'
-                  ? 'bg-accent-success'
-                  : phase === 'rejected'
-                  ? 'bg-accent-warning'
-                  : phase === 'chatting'
-                  ? 'bg-tech-light breath-dot'
-                  : 'bg-ink-300'
-              }`}
-            />
-            {phase === 'chatting' && 'Agent 推送中'}
-            {phase === 'completed' && '等待你决定'}
-            {phase === 'accepted' && '已接受 · 转化成功'}
-            {phase === 'rejected' && '已拒绝 · Agent 撤退中'}
-            {phase === 'idle' && '准备中'}
+          <div className="text-[10px] text-ink-300">
+            推荐产品：{brand} {product}
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -146,28 +121,6 @@ export function PersonaChatPanel({ persona }: PersonaChatPanelProps) {
 
       {/* 对话区 */}
       <div className="flex-1 space-y-3 overflow-y-auto p-5">
-        {/* 顶部：被推荐的产品信息卡 */}
-        <div className="animate-fade-in rounded-lg border border-tech-light/20 bg-tech/[0.04] p-3">
-          <div className="flex items-center gap-2">
-            <img
-              src={matchedProduct.image}
-              alt={matchedProduct.name}
-              className="h-10 w-10 shrink-0 rounded object-cover"
-            />
-            <div className="min-w-0 flex-1">
-              <div className="text-[10px] text-ink-300">{matchedProduct.brand}</div>
-              <div className="truncate text-xs font-medium text-ink-50">{matchedProduct.name}</div>
-            </div>
-            <div className="rounded-md border border-tech-light/40 bg-tech/10 px-2 py-1 text-center">
-              <div className="text-[9px] text-tech-light">真实匹配分</div>
-              <div className="font-mono text-sm font-bold text-tech-light">
-                {calculatePersonaMatch(matchedProduct, persona).score}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 对话气泡 */}
         {flow.map((s, i) => {
           if (i > step) return null
           const isCurrent = i === step && phase === 'chatting'
@@ -207,15 +160,12 @@ export function PersonaChatPanel({ persona }: PersonaChatPanelProps) {
 
         {/* 完成态：让用户决定 */}
         {phase === 'completed' && (
-          <div className="animate-fade-in space-y-2 rounded-xl border border-tech-light/30 bg-tech/[0.05] p-4">
-            <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-tech-light">
-              <Sparkles className="h-3 w-3" />
-              球在你这边 · Agent 不催不闹
-            </div>
+          <div className="animate-fade-in rounded-xl border border-tech-light/30 bg-tech/[0.05] p-4">
+            <div className="mb-1 text-[10px] uppercase tracking-wider text-tech-light">球在你这边</div>
             <p className="text-[11px] leading-relaxed text-ink-100">
-              Agent 已经把信息摆给你了。<span className="text-tech-light">决定权完全在你手里</span>，没有「立即下单」「限时优惠」之类的催单。
+              Agent 已经把信息摆给你了。<span className="text-tech-light">决定权在你手里</span>，没有「立即下单」「限时优惠」之类的催单。
             </p>
-            <div className="grid grid-cols-2 gap-2 pt-1">
+            <div className="mt-3 grid grid-cols-2 gap-2">
               <button
                 onClick={handleAccept}
                 className="flex items-center justify-center gap-1.5 rounded-md bg-accent-success/15 px-3 py-2 text-xs font-medium text-accent-success transition-all hover:bg-accent-success/25"
@@ -239,16 +189,11 @@ export function PersonaChatPanel({ persona }: PersonaChatPanelProps) {
           <div className="animate-fade-in rounded-xl border border-accent-success/30 bg-accent-success/[0.06] p-4">
             <div className="mb-2 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-accent-success">
               <Heart className="h-3 w-3" />
-              转化成功 · 这是 Agent 想看到的反应
+              转化成功
             </div>
             <p className="text-[11px] leading-relaxed text-ink-100">
               Agent 不会弹「恭喜你」之类的彩带——它会继续陪你日常聊天，等下次你有相关需求时自然地再提一句。
             </p>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
-              <Metric label="匹配度" value={`${calculatePersonaMatch(matchedProduct, persona).score}%`} tone="success" />
-              <Metric label="采纳概率" value="68%" tone="tech" />
-              <Metric label="推荐时机" value="✓ 最佳" tone="ink" />
-            </div>
           </div>
         )}
 
@@ -256,7 +201,7 @@ export function PersonaChatPanel({ persona }: PersonaChatPanelProps) {
         {phase === 'rejected' && (
           <div className="animate-fade-in space-y-2">
             <div className="rounded-xl border border-accent-warning/30 bg-accent-warning/[0.04] p-4">
-              <div className="mb-2 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-accent-warning">
+              <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-accent-warning">
                 <X className="h-3 w-3" />
                 拒绝已记录 · Agent 不会追着你推
               </div>
@@ -284,28 +229,6 @@ export function PersonaChatPanel({ persona }: PersonaChatPanelProps) {
           </div>
         )}
       </div>
-
-      {/* 底部状态条 */}
-      <div className="border-t border-white/[0.05] p-3">
-        <div className="flex items-center gap-2 text-[10px] text-ink-300/70">
-          <span>产品：{brand} {product}</span>
-          <span className="ml-auto">{step + 1} / {flow.length}</span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function Metric({ label, value, tone }: { label: string; value: string; tone: 'tech' | 'success' | 'ink' }) {
-  const colorMap = {
-    tech: 'text-tech-light',
-    success: 'text-accent-success',
-    ink: 'text-ink-50',
-  } as const
-  return (
-    <div className="rounded-md border border-white/[0.05] bg-white/[0.02] p-2 text-center">
-      <div className="text-[9px] uppercase tracking-wider text-ink-300/70">{label}</div>
-      <div className={`mt-0.5 font-mono text-sm font-semibold ${colorMap[tone]}`}>{value}</div>
     </div>
   )
 }

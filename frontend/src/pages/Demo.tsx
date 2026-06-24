@@ -1,16 +1,14 @@
-// 整合的演示页：4 个核心场景分 section 滚动
+// 演示页：3 个核心场景（产品 / 人格 / 对比）
 import { useState } from 'react'
 import { ProductWorld } from './ProductWorld'
 import { PersonaWorld } from './PersonaWorld'
 import { ContrastDemo } from './ContrastDemo'
-import { TimingClock } from './TimingClock'
-import { Target, MessageCircle, Zap, Clock } from 'lucide-react'
+import { Target, MessageCircle, Zap } from 'lucide-react'
 
 const SECTIONS = [
   { key: 'product', label: '产品世界', icon: Target },
   { key: 'persona', label: '人格对话', icon: MessageCircle },
   { key: 'contrast', label: '反常识对比', icon: Zap },
-  { key: 'timing', label: '时机之轮', icon: Clock },
 ] as const
 
 type SectionKey = (typeof SECTIONS)[number]['key']
@@ -55,10 +53,6 @@ export function Demo() {
 
         <Section id="contrast" title="3 · 反常识对比" subtitle="通用 Agent vs Agentverse Agent · 同款产品同个人 · 两种话术">
           <ContrastDemo />
-        </Section>
-
-        <Section id="timing" title="4 · 时机之轮" subtitle="24 小时 × 8 人格推荐强度热力图">
-          <TimingClock />
         </Section>
       </div>
     </main>
