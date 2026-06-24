@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
+    "dev": "vite frontend",
+    "build": "tsc -b frontend && vite build frontend",
+    "preview": "vite preview frontend",
     "server": "node server/index.mjs",
     "dev:all": "concurrently -k -n web,api -c blue,magenta \"npm run dev\" \"npm run server\""
   },

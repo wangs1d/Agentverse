@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 import { fileURLToPath, URL } from 'url'
 
 export default defineConfig({
+  root: '.',
+  // GitHub Pages 部署在子路径，必须加这个 base
+  base: '/Agentverse/',
   plugins: [react()],
   resolve: {
     alias: {

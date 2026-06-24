@@ -14,6 +14,11 @@ const SAMPLE_IMAGES = {
   ],
 }
 
+const PLACEHOLDERS = {
+  brand: '例如：Acme · 智云科技',
+  name: '例如：AURA 智能助手 Pro',
+}
+
 export function MerchantPanel() {
   const { product, setProduct, stage, submitPromo, reset } = usePromoStore()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -21,8 +26,23 @@ export function MerchantPanel() {
   const isLocked = stage !== 'idle'
   const active = stage !== 'idle'
 
+  const switchType = (t: 'software' | 'hardware') => {
+    if (isLocked) return
+    // 保留原 image（如果它属于新 type 才保留），否则清空。
+    // 这样切回旧 type 也能找回上次的图。
+    const stillValid =
+      product.image && SAMPLE_IMAGES[t].includes(product.image)
+    setProduct({ type: t, image: stillValid ? product.image : '' })
+  }
+
   const pickImage = (idx: number) => {
     setProduct({ image: SAMPLE_IMAGES[product.type][idx] })
+  }
+
+  const onPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = Number(e.target.value)
+    const safe = Number.isFinite(raw) ? Math.max(0, Math.min(raw, 99999)) : 0
+    setProduct({ price: safe })
   }
 
   return (
@@ -41,7 +61,7 @@ export function MerchantPanel() {
             {(['software', 'hardware'] as const).map((t) => (
               <button
                 key={t}
-                onClick={() => !isLocked && setProduct({ type: t, image: '' })}
+                onClick={() => switchType(t)}
                 disabled={isLocked}
                 className={`rounded px-3 py-2 text-xs font-medium transition-all ${
                   product.type === t
@@ -62,7 +82,7 @@ export function MerchantPanel() {
             value={product.brand}
             onChange={(e) => setProduct({ brand: e.target.value })}
             disabled={isLocked}
-            placeholder=""
+            placeholder={PLACEHOLDERS.brand}
             className="input-field"
           />
         </div>
@@ -74,7 +94,7 @@ export function MerchantPanel() {
             value={product.name}
             onChange={(e) => setProduct({ name: e.target.value })}
             disabled={isLocked}
-            placeholder=""
+            placeholder={PLACEHOLDERS.name}
             className="input-field"
           />
         </div>
@@ -100,8 +120,11 @@ export function MerchantPanel() {
             </div>
             <input
               type="number"
+              min={0}
+              max={99999}
+              step={1}
               value={product.price}
-              onChange={(e) => setProduct({ price: Number(e.target.value) })}
+              onChange={onPriceChange}
               disabled={isLocked}
               className="input-field"
             />

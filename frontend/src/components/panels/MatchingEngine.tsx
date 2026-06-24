@@ -58,7 +58,7 @@ export function MatchingEngine() {
           ].map((s, i, arr) => (
             <div key={s.key} className="flex flex-1 items-center gap-1.5">
               <div
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-medium transition-all ${
+                className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-medium transition-all ${
                   s.done
                     ? 'bg-tech text-white'
                     : s.active
@@ -249,8 +249,42 @@ interface ActiveVizProps {
 }
 
 /**
+ * 根据画像 + 产品组合派生命中索引。
+ * 同一个画像组合会得到相同的高亮集合（演示可解释、不抖动），
+ * 不同组合会得到不同分布（避免"每次都是同一批人亮起"的露馅感）。
+ * 使用简单 FNV-1a 风格哈希，无需外部依赖。
+ */
+function deriveHitIndices(
+  personas: { id: string; label: string }[],
+  product: { name: string; type: string },
+  total = 60,
+  hitCount = 15,
+): number[] {
+  const seed = `${personas.map((p) => p.id).join('|')}::${product.type}::${product.name}`
+  let h = 2166136261
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  const out: number[] = []
+  // 线性同余生成一组互不重复的索引
+  let state = (h >>> 0) || 1
+  while (out.length < hitCount) {
+    state = (state * 1664525 + 1013904223) >>> 0
+    const idx = state % total
+    if (!out.includes(idx)) out.push(idx)
+  }
+  return out.sort((a, b) => a - b)
+}
+
+/**
  * 主动画区（宽幅版）
  * 布局：左侧产品卡 | 中央 AI Hub | 右侧用户池（搜索 + 命中高亮）
+ *
+ * 动画策略（降噪版）：
+ *  - inferring：只保留 AI Hub 呼吸 + 顶部 persona chip 涌现
+ *  - matching：Hub 旋转 + 用户池单次扫描 + 主连线流光（命中点连线由一次性渐入替代）
+ *  - done：仅保留命中点的轻微呼吸（去掉 15 个并发辐射圆）
  */
 function ActiveVisualization({
   inferring,
@@ -260,6 +294,12 @@ function ActiveVisualization({
   product,
   matchedAgents,
 }: ActiveVizProps) {
+  const hitIndices = deriveHitIndices(inferredPersonas, product)
+  // 命中点抽样用于绘制连接线（最多 6 条，避免视觉过载）
+  const connectionSamples = (() => {
+    const step = Math.max(1, Math.floor(hitIndices.length / 6))
+    return hitIndices.filter((_, i) => i % step === 0).slice(0, 6)
+  })()
   return (
     <div className="absolute inset-0">
       <svg
@@ -380,17 +420,9 @@ function ActiveVisualization({
             const col = i % cols
             const cx = 50 + col * 45
             const cy = 50 + row * 27
-            // 命中规则：每4/5/7/9/11/13/15的倍数
-            const hitIndices = [3, 5, 7, 11, 19, 23, 28, 31, 37, 41, 44, 47, 52, 55, 58]
             const isHit = done && hitIndices.includes(i)
             return (
               <g key={i}>
-                {isHit && (
-                  <circle cx={cx} cy={cy} r="8" fill="none" stroke="#00aaff" strokeWidth="0.6" opacity="0.5">
-                    <animate attributeName="r" values="5;11;5" dur="2s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" values="0.7;0;0.7" dur="2s" repeatCount="indefinite" />
-                  </circle>
-                )}
                 <circle
                   cx={cx}
                   cy={cy}
@@ -420,31 +452,26 @@ function ActiveVisualization({
         />
 
         {/* === 连线：Hub → 用户池（命中节点连线） === */}
-        {(matching || done) && (
+        {(matching || done) && connectionSamples.length > 0 && (
           <g>
-            {/* 多条命中连线 */}
-            {[
-              { x: 750, y: 110, delay: 0 },
-              { x: 795, y: 137, delay: 0.2 },
-              { x: 840, y: 164, delay: 0.4 },
-              { x: 885, y: 191, delay: 0.6 },
-              { x: 750, y: 218, delay: 0.3 },
-              { x: 840, y: 245, delay: 0.5 },
-              { x: 930, y: 272, delay: 0.7 },
-              { x: 795, y: 299, delay: 0.4 },
-              { x: 885, y: 326, delay: 0.6 },
-              { x: 840, y: 353, delay: 0.5 },
-            ].map((c, i) => (
-              <path
-                key={i}
-                d={`M 540 250 Q 620 ${250 + (c.y - 250) * 0.4} ${c.x} ${c.y}`}
-                stroke="url(#lineGrad)"
-                strokeWidth="1.2"
-                fill="none"
-                className="flow-line"
-                style={{ animationDelay: `${c.delay}s` }}
-              />
-            ))}
+            {/* 命中点连线：根据 deriveHitIndices 动态抽取，最多 6 条 */}
+            {connectionSamples.map((i, idx) => {
+              const col = i % 5
+              const row = Math.floor(i / 5)
+              const cx = 700 + 50 + col * 45
+              const cy = 60 + 50 + row * 27
+              return (
+                <path
+                  key={i}
+                  d={`M 540 250 Q 620 ${250 + (cy - 250) * 0.4} ${cx} ${cy}`}
+                  stroke="url(#lineGrad)"
+                  strokeWidth="1.2"
+                  fill="none"
+                  className={matching ? 'flow-line' : ''}
+                  style={{ animationDelay: `${idx * 0.18}s` }}
+                />
+              )
+            })}
           </g>
         )}
       </svg>

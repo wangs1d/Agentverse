@@ -1,4 +1,5 @@
 import { PERSONAS, type Persona } from '../data/personas'
+import { getRandomRecommendation, type ConversationFlow } from '../data/recommendations'
 
 export interface ProductInfo {
   type: 'software' | 'hardware'
@@ -249,4 +250,75 @@ export function calculateMatch(
  */
 export function pickPrimaryPersona(personas: Persona[]): Persona {
   return personas[0] || PERSONAS[0]
+}
+
+/**
+ * AI 实时生成 5 步推荐对话
+ * 入参：product + primary persona
+ * 失败抛错
+ */
+export async function generateRecommendationByAI(
+  product: ProductInfo,
+  primary: Persona,
+  signal?: AbortSignal,
+): Promise<ConversationFlow> {
+  const r = await fetch('/api/generate-recommendation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: product.name,
+      desc: product.desc,
+      type: product.type,
+      brand: product.brand,
+      personaId: primary.id,
+    }),
+    signal,
+  })
+  if (!r.ok) {
+    const detail = await r.text().catch(() => '')
+    throw new Error(`AI 推荐生成失败: HTTP ${r.status} ${detail.slice(0, 200)}`)
+  }
+  const data = await r.json()
+  const flow = data?.flow
+  if (
+    !flow ||
+    typeof flow.greeting !== 'string' ||
+    typeof flow.probe !== 'string' ||
+    typeof flow.userResponse !== 'string' ||
+    typeof flow.share !== 'string' ||
+    typeof flow.closing !== 'string'
+  ) {
+    throw new Error('AI 返回格式异常')
+  }
+  return flow
+}
+
+/**
+ * 统一入口：先调 AI 实时生成对话，失败/超时/离线时回退到本地模板
+ * 返回带 source 字段的结果，便于 UI 展示当前用的是哪条路径
+ */
+export interface RecommendResult {
+  flow: ConversationFlow
+  source: 'ai' | 'rule'
+  detail?: string
+}
+
+export async function generateRecommendation(
+  product: ProductInfo,
+  primary: Persona,
+  opts: { timeoutMs?: number } = {},
+): Promise<RecommendResult> {
+  const { timeoutMs = 10000 } = opts
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const flow = await generateRecommendationByAI(product, primary, controller.signal)
+    clearTimeout(timer)
+    return { flow, source: 'ai' }
+  } catch (err) {
+    clearTimeout(timer)
+    const detail = err instanceof Error ? err.message : String(err)
+    console.warn('[matcher] AI 推荐生成失败，回退到模板:', detail)
+    return { flow: getRandomRecommendation(primary.id), source: 'rule', detail }
+  }
 }

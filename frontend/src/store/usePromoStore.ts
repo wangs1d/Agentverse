@@ -1,8 +1,14 @@
 import { create } from 'zustand'
 import type { ProductInfo } from '../lib/matcher'
-import { inferPersonas, calculateMatch, pickPrimaryPersona, type InferSource } from '../lib/matcher'
+import {
+  inferPersonas,
+  calculateMatch,
+  pickPrimaryPersona,
+  generateRecommendation,
+  type InferSource,
+} from '../lib/matcher'
 import type { Persona } from '../data/personas'
-import { getRandomRecommendation } from '../data/recommendations'
+import type { ConversationFlow } from '../data/recommendations'
 
 export type Stage = 'idle' | 'submitted' | 'inferring' | 'matching' | 'done'
 
@@ -32,6 +38,8 @@ interface PromoState {
   // C 端
   chatMessages: ChatMessage[]
   typing: boolean
+  recommendSource: InferSource | null
+  recommendSourceDetail: string | null
 
   // UI
   collapsed: { left: boolean; middle: boolean; right: boolean }
@@ -69,6 +77,8 @@ export const usePromoStore = create<PromoState>((set, get) => ({
 
   chatMessages: [],
   typing: false,
+  recommendSource: null,
+  recommendSourceDetail: null,
 
   collapsed: { left: false, middle: false, right: false },
   togglePanel: (p) =>
@@ -129,32 +139,47 @@ export const usePromoStore = create<PromoState>((set, get) => ({
       matchedAgents: 0,
       chatMessages: [],
       typing: false,
+      recommendSource: null,
+      recommendSourceDetail: null,
       collapsed: { left: false, middle: false, right: false },
     })
   },
 }))
 
 /**
- * 启动 Agent 对话：五步式「陪伴式分享」逐条打字机输出
+ * 启动 Agent 对话：先让 KIMI 实时生成 5 步对话（失败回退模板），再逐条打字机输出
  * 节奏：先共情 → 询问 → 等待用户回应 → 顺势带出产品 → 轻量收尾
  * 规则：
  *  - 不报价格、不出产品卡片；
- *  - 以"靠谱私人助手"的口吻，把 {brand} 出的 {product} 明确嵌进 share 行，
- *    让 C 端知道是"哪家的什么产品"；
+ *  - AI 路径：share 字段由 KIMI 直接嵌入品牌与产品名；模板路径：用 {brand}/{product} 占位填充
  *  - 仍不催单，把决定权交还用户。
  */
-function startAgentConversation(
+async function startAgentConversation(
   primary: Persona,
   product: ProductInfo,
   set: (partial: Partial<PromoState> | ((s: PromoState) => Partial<PromoState>)) => void,
 ) {
-  const flow = getRandomRecommendation(primary.id)
-  // 靠谱助手的口吻：把 {brand} {product} 一并嵌进对话，列出"哪家的什么产品"
-  // 品牌为空时降级为"那家"，避免出现"出的 那款"这种断裂
+  // 先亮起"思考中"动画，给 KIMI 留生成时间
+  set({ typing: true })
+
+  const { flow, source, detail } = await generateRecommendation(product, primary, { timeoutMs: 10000 })
+  set({ recommendSource: source, recommendSourceDetail: detail ?? null })
+
+  // 模板路径才需要做占位符替换；AI 路径下 KIMI 已经按要求嵌入了品牌与产品名
   const productName = product.name?.trim() || '那款产品'
   const brandName = product.brand?.trim() || '那家'
   const fill = (text: string) =>
     text.replace(/\{brand\}/g, brandName).replace(/\{product\}/g, productName)
+  const finalFlow: ConversationFlow =
+    source === 'ai'
+      ? flow
+      : {
+          greeting: fill(flow.greeting),
+          probe: fill(flow.probe),
+          userResponse: fill(flow.userResponse),
+          share: fill(flow.share),
+          closing: fill(flow.closing),
+        }
 
   // 1) 关心  2) 询问  3) 用户主动表达需求  4) 顺势分享（自然带出产品名）  5) 轻量收尾
   const lines: Array<{
@@ -162,12 +187,15 @@ function startAgentConversation(
     text: string
     delayBefore?: number
   }> = [
-    { role: 'agent', text: fill(flow.greeting), delayBefore: 0 },
-    { role: 'agent', text: fill(flow.probe), delayBefore: 600 },
-    { role: 'user', text: fill(flow.userResponse), delayBefore: 900 },
-    { role: 'agent', text: fill(flow.share), delayBefore: 700 },
-    { role: 'agent', text: fill(flow.closing), delayBefore: 600 },
+    { role: 'agent', text: finalFlow.greeting, delayBefore: 0 },
+    { role: 'agent', text: finalFlow.probe, delayBefore: 600 },
+    { role: 'user', text: finalFlow.userResponse, delayBefore: 900 },
+    { role: 'agent', text: finalFlow.share, delayBefore: 700 },
+    { role: 'agent', text: finalFlow.closing, delayBefore: 600 },
   ]
+
+  // AI 路径的对话总长通常比模板短，把打字节奏调快一档以减少等待感
+  const charInterval = source === 'ai' ? 18 : 22
 
   let i = 0
   const playNext = () => {
@@ -206,7 +234,7 @@ function startAgentConversation(
         const next = lines[i]
         setTimeout(playNext, next?.delayBefore ?? 380)
       }
-    }, 22)
+    }, charInterval)
   }
   setTimeout(playNext, 200)
 }
