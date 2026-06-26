@@ -1,0 +1,77 @@
+{
+  "data": [
+    {
+      "id": "page-product-upload",
+      "title": "B端产品上传",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1782320000000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/product-upload.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-data-analytics",
+      "title": "数据分析",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1782322000000,
+      "canvasData": {
+        "x": 0,
+        "y": 601,
+        "group": 1
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/data-analytics.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "image-001",
+      "title": "上传页Hero背景",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1782320000000,
+      "canvasData": {
+        "x": 0,
+        "y": 1293
+      },
+      "devMetadata": {
+        "imageSrc": "assets/hero-dark-upload.jpg"
+      }
+    },
+    {
+      "id": "image-002",
+      "title": "数据分析Hero背景",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1782322000000,
+      "canvasData": {
+        "x": 620,
+        "y": 1293
+      },
+      "devMetadata": {
+        "imageSrc": "assets/hero-data-analytics.jpg"
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": true,
+    "deviceType": "desktop",
+    "projectName": "B端产品上传",
+    "designLibrary": {
+      "name": "苹果",
+      "id": "dl_builtin_apple",
+      "version": null,
+      "scope": "built-in-global",
+      "path": "c:\\Users\\Ws.LAPTOP-P2G1M5P1\\.trae-cn\\design_libraries\\dl_builtin_apple",
+      "versionSource": "metadata.json"
+    }
+  }
+}

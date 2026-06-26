@@ -1,66 +1,184 @@
-// 简洁首页：仅 hero，去掉所有装饰性卡片网格
-import { ArrowRight, Sparkles, BarChart3 } from 'lucide-react'
+import { useMemo } from 'react'
+import { ArrowRight, BarChart3, Sparkles, Package, Bot, TrendingUp } from 'lucide-react'
+import { useProductLib } from '../store/useProductLib'
+import { calculateOverallMatch } from '../lib/scoreCalculator'
+import { computeFunnel } from '../lib/funnel'
 
 interface HomeProps {
-  onNavigate: (page: 'demo' | 'merchant') => void
+  onNavigate: (page: 'upload' | 'analytics') => void
 }
 
 export function Home({ onNavigate }: HomeProps) {
+  const { products } = useProductLib()
+
+  // 真实数据摘要
+  const summary = useMemo(() => {
+    const total = products.length
+    const uploaded = products.filter((p) => p.id.startsWith('uploaded-')).length
+    const live = products.filter((p) => p.status === 'live' || p.id.startsWith('uploaded-')).length
+    const avgMatch = Math.round(
+      products.reduce((s, p) => s + calculateOverallMatch(p).avgScore, 0) / Math.max(1, total),
+    )
+    const funnel = computeFunnel(products)
+    return {
+      total,
+      uploaded,
+      live,
+      avgMatch,
+      personaCvr: funnel.total.clicks > 0
+        ? ((funnel.total.conversions / funnel.total.clicks) * 100).toFixed(1)
+        : '0.0',
+    }
+  }, [products])
+
   return (
-    <main className="flex flex-1 flex-col overflow-y-auto">
-      <section className="relative flex min-h-[85vh] items-center justify-center overflow-hidden px-6">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/2 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-tech/10 blur-3xl" />
-        </div>
+    <div className="min-h-screen bg-black">
+      {/* Hero Section */}
+      <section
+        className="relative flex w-full items-center justify-center"
+        style={{
+          minHeight: '100vh',
+          marginTop: 56,
+          backgroundImage: "url('/assets/images/hero-dark-upload.jpg')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.6) 50%, #000 100%)',
+          }}
+        />
+        <div className="relative z-10 flex flex-col items-center justify-center px-6 text-center">
+          <span
+            className="inline-flex items-center justify-center whitespace-nowrap px-3 py-1 text-xs font-medium"
+            style={{
+              background: 'var(--surface-secondary, #1c1c1e)',
+              color: 'var(--text-secondary, #8e8e93)',
+              borderRadius: 999,
+              border: '1px solid var(--surface-border, #3a3a3c)',
+            }}
+          >
+            Persona-Driven Commerce
+          </span>
 
-        <div className="relative mx-auto max-w-3xl text-center">
-          <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-tech-light/30 bg-tech/[0.06] px-3 py-1 text-[11px] text-tech-light">
-            <Sparkles className="h-3 w-3" />
-            <span>关系驱动的 B2C 智能推荐平台</span>
-          </div>
-
-          <h1 className="text-4xl font-semibold leading-tight tracking-tight text-ink-50 md:text-5xl">
+          <h1
+            className="mt-6 font-bold tracking-tight"
+            style={{
+              fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+              color: 'var(--text-primary, #f5f5f7)',
+              lineHeight: 1.1,
+              wordBreak: 'keep-all',
+            }}
+          >
             你的产品，
             <br />
-            <span className="bg-gradient-to-r from-tech-light via-tech to-tech-neon bg-clip-text text-transparent">
-              会被对的人主动找上门
-            </span>
+            会被对的人主动找上门
           </h1>
 
-          <p className="mx-auto mt-5 max-w-xl text-[14px] leading-relaxed text-ink-100">
-            Agentverse 不卖广告位。我们用 8 个带内部矛盾的人格模型，
-            <br className="hidden md:block" />
-            让你的产品以私人 Agent 主动开口的方式，触达真正会买的人。
+          <p
+            className="mt-6 max-w-xl"
+            style={{
+              fontSize: '1.1rem',
+              color: 'var(--text-secondary, #8e8e93)',
+              lineHeight: 1.7,
+            }}
+          >
+            Agentverse 不卖广告位。我们用 8 类用户画像模型，
+            <br />
+            让你的产品以 Agent 主动开口的方式，触达真正会买的人。
           </p>
 
-          <p className="mx-auto mt-4 max-w-lg text-[12px] leading-relaxed text-ink-300">
-            通用 Agent 联网能搜到商品，但解决不了「信任不对称」。
-            <br className="hidden md:block" />
-            Agentverse 的 Agent 会在对的时间、对的语气、主动说出缺点。
-          </p>
-
-          <div className="mt-8 flex items-center justify-center gap-3">
+          <div className="mt-10 flex items-center justify-center gap-4">
             <button
-              onClick={() => onNavigate('demo')}
-              className="group flex items-center gap-2 rounded-md bg-tech px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-tech-light hover:shadow-glow-soft"
+              onClick={() => onNavigate('upload')}
+              className="group flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-medium text-white transition-all duration-200 hover:brightness-110 hover:-translate-y-0.5 active:scale-[0.98]"
+              style={{ background: 'var(--brand-blue, #2e8dff)' }}
             >
-              看 60 秒 Demo
-              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+              开始上传产品
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </button>
             <button
-              onClick={() => onNavigate('merchant')}
-              className="flex items-center gap-2 rounded-md border border-white/[0.08] bg-white/[0.02] px-5 py-2.5 text-sm text-ink-100 transition-all hover:border-white/15 hover:text-ink-50"
+              onClick={() => onNavigate('analytics')}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200 border"
+              style={{
+                background: 'transparent',
+                color: 'var(--text-primary, #f5f5f7)',
+                borderColor: 'var(--surface-border, #3a3a3c)',
+              }}
             >
-              <BarChart3 className="h-3.5 w-3.5" />
-              商家后台
+              <BarChart3 className="h-4 w-4" />
+              查看数据
             </button>
           </div>
         </div>
       </section>
 
-      <footer className="border-t border-white/[0.05] px-6 py-5 text-center text-[11px] text-ink-300">
-        Agentverse · Persona-Driven Commerce · 2026
+      {/* Quick Stats Strip (real data) */}
+      <section className="w-full px-6 lg:px-8" style={{ paddingTop: 60, paddingBottom: 60 }}>
+        <div className="max-w-screen-xl mx-auto">
+          <div
+            className="grid grid-cols-2 gap-3 md:grid-cols-4"
+            style={{
+              background: 'var(--surface-card, #1c1c1e)',
+              border: '1px solid var(--surface-border, #3a3a3c)',
+              borderRadius: 'var(--apple-radius, 1.2rem)',
+              padding: 24,
+            }}
+          >
+            <Stat icon={<Package className="h-4 w-4" />} label="产品库" value={String(summary.total)} hint={`已上架 ${summary.live}`} />
+            <Stat icon={<Sparkles className="h-4 w-4" />} label="AI 推断" value={`${summary.avgMatch}`} hint="平均匹配分" />
+            <Stat icon={<Bot className="h-4 w-4" />} label="画像" value="8 类" hint="C 端人格模型" />
+            <Stat icon={<TrendingUp className="h-4 w-4" />} label="推荐转化" value={`${summary.personaCvr}%`} hint="近 7 天" />
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer
+        className="w-full border-t px-6 py-6"
+        style={{ borderColor: 'var(--surface-border, #3a3a3c)' }}
+      >
+        <p className="text-center text-xs" style={{ color: 'var(--text-secondary, #8e8e93)' }}>
+          &copy; 2025 Agentverse &middot; 服务条款 &middot; 隐私政策
+        </p>
       </footer>
-    </main>
+    </div>
+  )
+}
+
+function Stat({
+  icon,
+  label,
+  value,
+  hint,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: string
+  hint: string
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-secondary, #8e8e93)' }}>
+        {icon}
+        <span>{label}</span>
+      </div>
+      <div
+        className="font-bold tracking-tight"
+        style={{
+          fontSize: '1.6rem',
+          color: 'var(--text-primary, #f5f5f7)',
+          fontVariantNumeric: 'tabular-nums',
+          lineHeight: 1.1,
+        }}
+      >
+        {value}
+      </div>
+      <div className="text-[11px]" style={{ color: 'var(--text-secondary, #8e8e93)' }}>
+        {hint}
+      </div>
+    </div>
   )
 }

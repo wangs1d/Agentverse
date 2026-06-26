@@ -1,6 +1,6 @@
-import { Sparkles } from 'lucide-react'
+import { CircleAlert, User } from 'lucide-react'
 
-export type AppPage = 'home' | 'demo' | 'merchant'
+export type AppPage = 'home' | 'upload' | 'analytics'
 
 interface TopBarProps {
   page: AppPage
@@ -8,48 +8,65 @@ interface TopBarProps {
 }
 
 const TABS: { key: AppPage; label: string }[] = [
-  { key: 'home', label: '首页' },
-  { key: 'demo', label: '演示' },
-  { key: 'merchant', label: '商家后台' },
+  { key: 'upload', label: '产品管理' },
+  { key: 'analytics', label: '数据分析' },
 ]
 
 export function TopBar({ page, onPageChange }: TopBarProps) {
   return (
-    <header className="relative z-20 border-b border-white/[0.05] bg-ink-900/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-6">
+    <header
+      className="fixed left-0 top-0 z-50 w-full border-b"
+      style={{
+        height: 56,
+        background: 'rgba(0,0,0,0.72)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderColor: 'var(--surface-border, #3a3a3c)',
+      }}
+    >
+      <div className="flex h-full max-w-screen-2xl mx-auto items-center justify-between px-8">
+        {/* Logo */}
         <button
           onClick={() => onPageChange('home')}
-          className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
+          className="flex items-center gap-2 transition-opacity hover:opacity-80"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-tech shadow-glow-soft">
-            <Sparkles className="h-3.5 w-3.5 text-white" />
-          </div>
-          <div className="text-left">
-            <div className="text-sm font-semibold text-ink-50">Agentverse</div>
-            <div className="text-[10px] uppercase tracking-widest text-ink-300">Persona-Driven Commerce</div>
-          </div>
+          <span className="text-lg font-bold tracking-tight text-[var(--text-primary, #f5f5f7)]">
+            Agentverse
+          </span>
+          <span className="inline-block w-2 h-2 rounded-full bg-apple-blue" />
         </button>
 
-        <nav className="flex items-center gap-0.5">
+        {/* Nav Links */}
+        <nav className="flex items-center gap-6">
           {TABS.map((tab) => (
             <button
               key={tab.key}
               onClick={() => onPageChange(tab.key)}
-              className={`relative rounded-md px-4 py-1.5 text-[13px] font-medium transition-colors ${
-                page === tab.key ? 'text-ink-50' : 'text-ink-200 hover:text-ink-50'
+              className={`text-sm transition-colors duration-150 ${
+                page === tab.key
+                  ? 'text-apple-blue'
+                  : 'text-apple-text-secondary hover:text-[var(--text-primary, #f5f5f7)]'
               }`}
             >
               {tab.label}
-              {page === tab.key && (
-                <span className="absolute inset-x-3 -bottom-px h-px bg-tech-light" />
-              )}
             </button>
           ))}
         </nav>
 
-        <div className="flex items-center gap-2 text-[11px] text-ink-200">
-          <span className="h-1.5 w-1.5 rounded-full bg-accent-success" />
-          <span>8 Personas × 8 Products</span>
+        {/* Right Actions */}
+        <div className="flex items-center gap-4">
+          <button className="text-apple-text-secondary transition-colors hover:text-apple-text">
+            <CircleAlert className="w-5 h-5" />
+          </button>
+          <div
+            className="flex items-center justify-center w-8 h-8 rounded-full border"
+            style={{
+              background: 'var(--surface-secondary, #1c1c1e)',
+              borderColor: 'var(--surface-border, #3a3a3c)',
+            }}
+          >
+            <User className="w-4 h-4 text-apple-text-secondary" />
+          </div>
         </div>
       </div>
     </header>

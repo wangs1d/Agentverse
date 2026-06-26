@@ -2,166 +2,102 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    color-scheme: dark;
-  }
-
-  html,
-  body,
-  #root {
-    height: 100%;
-  }
-
-  body {
-    @apply bg-ink-900 text-ink-50 font-sans antialiased;
-    background-image:
-      radial-gradient(circle at 15% -10%, rgba(0, 102, 204, 0.18), transparent 50%),
-      radial-gradient(circle at 85% 110%, rgba(0, 170, 255, 0.1), transparent 50%),
-      linear-gradient(180deg, #0a0a0a 0%, #0d0d0d 100%);
-    background-attachment: fixed;
-  }
-
-  * {
-    -webkit-font-smoothing: antialiased;
-  }
-
-  /* 自定义滚动条 */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 8px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 170, 255, 0.3);
-  }
+/* ===== Design Tokens ===== */
+:root {
+  color-scheme: dark;
+  --brand-blue: #2e8dff;
+  --brand-blue-dark: #007aff;
+  --surface-card: #1c1c1e;
+  --surface-card-hover: #2c2c2e;
+  --surface-secondary: #1c1c1e;
+  --surface-border: #3a3a3c;
+  --surface-border-light: #48484a;
+  --text-primary: #f5f5f7;
+  --text-secondary: #8e8e93;
+  --text-tertiary: #6e6e73;
+  --success-green: #30d158;
+  --success-green-bg: rgba(48, 209, 88, 0.12);
+  --error-red: #ff453a;
+  --warning-amber: #ff9f0a;
+  --warning-amber-bg: rgba(255, 159, 10, 0.12);
+  --apple-radius: 1.2rem;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: #000;
+  color: var(--text-primary);
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ===== Component Classes ===== */
 @layer components {
-  .panel-surface {
-    @apply bg-ink-850/80 border border-white/[0.06] backdrop-blur-xl;
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.04) inset,
-      0 24px 48px -24px rgba(0, 0, 0, 0.6);
+  .apple-card {
+    border-radius: var(--apple-radius);
+    border: 1px solid var(--surface-border);
+    background: var(--surface-card);
   }
 
-  .panel-header {
-    @apply flex items-center justify-between px-5 py-4 border-b border-white/[0.05];
+  .apple-input {
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid var(--surface-border);
+    background: var(--surface-secondary);
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    transition: all 0.2s;
+  }
+  .apple-input::placeholder {
+    color: var(--text-tertiary);
+  }
+  .apple-input:focus {
+    outline: none;
+    border-color: var(--brand-blue);
+    box-shadow: 0 0 0 1px var(--brand-blue);
   }
 
-  .panel-body {
-    @apply p-5;
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
-
-  .label-eyebrow {
-    @apply text-[10px] font-medium uppercase tracking-[0.18em] text-ink-200/70;
-  }
-
-  .btn-primary {
-    @apply relative inline-flex items-center justify-center gap-2 px-4 py-2.5
-      text-sm font-medium rounded-md
-      bg-tech text-white
-      transition-all duration-200
-      hover:bg-tech-light hover:shadow-glow-soft
-      active:scale-[0.98]
-      disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none;
-  }
-
-  .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 px-3 py-2
-      text-sm font-medium rounded-md
-      text-ink-100 bg-white/[0.03] border border-white/[0.06]
-      transition-all duration-200
-      hover:bg-white/[0.06] hover:border-white/10;
-  }
-
-  .input-field {
-    @apply w-full bg-ink-900/60 border border-white/[0.06]
-      rounded-md px-3 py-2 text-sm text-ink-50
-      placeholder:text-ink-300/50
-      transition-all duration-200
-      focus:outline-none focus:border-tech-light/60 focus:shadow-glow-soft;
-  }
-
-  .chip {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
-      text-xs font-medium
-      bg-white/[0.04] border border-white/[0.06]
-      text-ink-100
-      transition-all duration-200;
-  }
-
-  .chip-active {
-    @apply bg-tech/15 border-tech-light/50 text-tech-light;
-    box-shadow: 0 0 0 1px rgba(0, 170, 255, 0.15), 0 0 16px -4px rgba(0, 170, 255, 0.5);
-  }
-
-  .divider {
-    @apply h-px w-full bg-gradient-to-r from-transparent via-white/[0.06] to-transparent;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 4px;
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 
-/* 网格背景 */
-.grid-bg {
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-  background-size: 32px 32px;
-  background-position: -1px -1px;
-}
-
-/* 呼吸光点 */
-.breath-dot {
-  position: relative;
-}
-.breath-dot::after {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  background: currentColor;
-  opacity: 0.4;
-  animation: pulse-soft 2s ease-in-out infinite;
-  z-index: -1;
-}
-
-/* 粒子连线动画 */
-@keyframes dash {
-  to {
-    stroke-dashoffset: -200;
-  }
-}
-
-.flow-line {
-  stroke-dasharray: 6 8;
-  animation: dash 2.5s linear infinite;
-}
-
-/* 尊重用户的「减少动效」系统设置：
-   关闭循环动画、缩短过渡时长，避免眩晕/分神。
-   保留状态切换的瞬时反馈（如 fade-in 一次性动画）。 */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
-    animation-delay: 0ms !important;
     transition-duration: 0.001ms !important;
-  }
-  .flow-line,
-  .breath-dot::after,
-  .animate-pulse {
-    animation: none !important;
   }
 }

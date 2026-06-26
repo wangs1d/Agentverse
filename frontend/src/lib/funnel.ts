@@ -1,226 +1,172 @@
-// 漏斗数据生成器
-// 关键：数据不是硬编码，而是基于产品+人格的"真实"匹配分计算出来的
-// 这样切换产品/人格时数据会跟着变化
-
-import { calculatePersonaMatch, type PersonaMatch } from './scoreCalculator'
-import { PERSONA_PROFILES, type PersonaProfile } from '../data/personaProfiles'
+// 漏斗与聚合分析（前端用，纯本地计算）
+// 输入：产品列表 + 画像 -> 输出：每个画像的曝光/点击/转化/推荐数
+import { PERSONAS, type PersonaId } from '../data/personas'
 import type { Product } from '../data/products'
+import { calculateOverallMatch } from './scoreCalculator'
 
-/** 漏斗阶段 */
-export interface FunnelStage {
-  name: string
-  /** 绝对人数 */
+export interface FunnelStep {
+  label: string
   count: number
-  /** 相对上一阶段的转化率（0-1） */
-  conversionRate: number
-  /** 相对首阶段的转化率（0-1） */
-  totalConversion: number
-  /** 阶段描述 */
-  description: string
-  /** 该阶段的视觉色调 */
-  tone: 'tech' | 'warning' | 'success' | 'ink'
+  /** 相对上一阶段的转化率 0-1 */
+  rate: number
 }
 
-/** 单个产品针对某个人格的完整漏斗 */
-export interface ProductFunnel {
-  product: Product
-  persona: PersonaProfile
-  match: PersonaMatch
-  stages: FunnelStage[]
-  revenue: number
-  /** 单次推荐的成本（用于估算 ROI） */
-  cost: number
-  /** 投资回报率 = (收入 - 成本) / 成本 */
-  roi: number
+export interface PersonaFunnel {
+  personaId: PersonaId
+  label: string
+  emoji: string
+  color: string
+  impressions: number
+  clicks: number
+  recommendations: number
+  conversions: number
+  ctr: number // click / impression
+  cvr: number // conv / click
+  share: number // 该画像的曝光 / 总曝光 0-1
+  steps: FunnelStep[]
 }
 
-/**
- * 行业基准转化率（基于真实 B2B SaaS / 高客单消费品的多年数据）
- * 不同产品+人格组合，转化率会因分数高低而上下浮动
- */
-const BASE_RATES = {
-  // 强匹配产品（分数 75+）: Agent 会主动开口
-  strong: {
-    impressionToMatch: 0.85, // 看到产品 → Agent 觉得匹配（开口）
-    matchToEngage: 0.62, // Agent 开口 → 用户接收到
-    engageToClick: 0.31, // 用户接收 → 点击/查看详情
-    clickToConvert: 0.18, // 点击 → 最终转化
-  },
-  // 弱匹配（55-75）: Agent 观察中，只在最佳时机试探
-  weak: {
-    impressionToMatch: 0.45,
-    matchToEngage: 0.38,
-    engageToClick: 0.16,
-    clickToConvert: 0.08,
-  },
-  // 潜在匹配（<55）: 几乎不会主动开口
-  potential: {
-    impressionToMatch: 0.12,
-    matchToEngage: 0.21,
-    engageToClick: 0.08,
-    clickToConvert: 0.03,
-  },
-} as const
-
-/** 30 天内"看到"产品的 Agent 总数（按人格的真实使用频率模拟） */
-function getImpressionBase(persona: PersonaProfile): number {
-  // 模拟：基于 persona 决策速度+消费习惯
-  // 决策快的人看到的产品多但接受率低；研究型的人看到少但接受率高
-  const speedMap: Record<string, number> = {
-    '极快': 18000,
-    '快': 12000,
-    '中': 8500,
-    '慢': 4200,
-    '极慢': 1800,
-  }
-  return speedMap[persona.decisionSpeed] || 8000
-}
-
-/**
- * 计算单个产品+人格的漏斗
- */
-export function calculateFunnel(product: Product, persona: PersonaProfile): ProductFunnel {
-  const match = calculatePersonaMatch(product, persona)
-  const rates = BASE_RATES[match.tier]
-
-  // 浮动：匹配分越高，转化率越接近基准
-  // 分数从 35 到 100，rate 从 0.6x 到 1.3x
-  const rateMultiplier = 0.6 + ((match.score - 35) / 65) * 0.7
-
-  const impressionBase = getImpressionBase(persona)
-  // 浮动 -15% ~ +15%
-  const impressionJitter = 0.85 + (((product.id.charCodeAt(0) + persona.id.charCodeAt(0)) % 30) / 100)
-
-  const impressions = Math.round(impressionBase * impressionJitter)
-  const matched = Math.round(impressions * rates.impressionToMatch * rateMultiplier)
-  const engaged = Math.round(matched * rates.matchToEngage * rateMultiplier)
-  const clicked = Math.round(engaged * rates.engageToClick * rateMultiplier)
-  const converted = Math.round(clicked * rates.clickToConvert * rateMultiplier)
-
-  const stages: FunnelStage[] = [
-    {
-      name: 'Agent 看到',
-      count: impressions,
-      conversionRate: 1,
-      totalConversion: 1,
-      description: '该人格日常浏览触达 Agent 后台的产品池',
-      tone: 'ink',
-    },
-    {
-      name: '判定匹配 · 主动开口',
-      count: matched,
-      conversionRate: matched / impressions,
-      totalConversion: matched / impressions,
-      description: match.tier === 'strong' ? '强匹配：Agent 把握时机主动推荐' : match.tier === 'weak' ? '弱匹配：观察期试探' : '潜在匹配：默默关注',
-      tone: match.tier === 'strong' ? 'tech' : match.tier === 'weak' ? 'warning' : 'ink',
-    },
-    {
-      name: '用户接收 · 没有反感',
-      count: engaged,
-      conversionRate: engaged / matched,
-      totalConversion: engaged / impressions,
-      description: '话术匹配人格偏好，没被直接拉黑',
-      tone: 'tech',
-    },
-    {
-      name: '主动查看 · 详情点击',
-      count: clicked,
-      conversionRate: clicked / engaged,
-      totalConversion: clicked / impressions,
-      description: '用户从"没拉黑"变成"想了解下"',
-      tone: 'tech',
-    },
-    {
-      name: '最终转化 · 购买/注册',
-      count: converted,
-      conversionRate: converted / clicked,
-      totalConversion: converted / impressions,
-      description: '从 Agent 主动开口到付费转化',
-      tone: 'success',
-    },
-  ]
-
-  // 收入估算：产品价格 × 转化数
-  const revenue = product.price * converted
-  // 单次推荐成本（agent 调用 + 平台抽成）≈ 0.15 元/次曝光
-  const cost = Math.round(impressions * 0.15 + matched * 0.4)
-  const roi = cost > 0 ? (revenue - cost) / cost : 0
-
-  return {
-    product,
-    persona,
-    match,
-    stages,
-    revenue,
-    cost,
-    roi,
-  }
-}
-
-/**
- * 计算一个产品对所有 C 端人格的总漏斗
- */
-export function calculateProductTotalFunnel(product: Product): {
-  product: Product
-  perPersona: ProductFunnel[]
-  aggregate: {
+export interface OverallFunnel {
+  total: {
     impressions: number
-    matched: number
-    engaged: number
-    clicked: number
-    converted: number
-    revenue: number
-    cost: number
-    roi: number
-    /** 整体转化率 */
-    overallConversion: number
+    clicks: number
+    recommendations: number
+    conversions: number
   }
-  /** 按收入排序的最佳人格 */
-  topPersonas: ProductFunnel[]
-} {
-  const perPersona = PERSONA_PROFILES.map((p) => calculateFunnel(product, p))
+  byPersona: PersonaFunnel[]
+  trend: { date: string; recommendations: number }[] // 近 7 天
+}
 
-  const aggregate = {
-    impressions: perPersona.reduce((s, f) => s + f.stages[0].count, 0),
-    matched: perPersona.reduce((s, f) => s + f.stages[1].count, 0),
-    engaged: perPersona.reduce((s, f) => s + f.stages[2].count, 0),
-    clicked: perPersona.reduce((s, f) => s + f.stages[3].count, 0),
-    converted: perPersona.reduce((s, f) => s + f.stages[4].count, 0),
-    revenue: perPersona.reduce((s, f) => s + f.revenue, 0),
-    cost: perPersona.reduce((s, f) => s + f.cost, 0),
-    roi: 0,
-    overallConversion: 0,
+/**
+ * 漏斗模型：
+ * - 曝光 ≈ 主匹配分 × 月销量 × 90（基础流量系数）
+ * - 点击 = 曝光 × CTR(画像基准 0.18-0.28)
+ * - 推荐 = 点击 × recommendRate(画像基准 0.45-0.65)
+ * - 转化 = 推荐 × CVR(画像基准 0.20-0.34)
+ * 不同画像的 CTR/CVR 用 id 做 hash 抖动，避免全相同
+ */
+function hashBias(id: string): number {
+  let h = 0
+  for (let i = 0; i < id.length; i += 1) h = (h * 31 + id.charCodeAt(i)) | 0
+  // 抖动到 0.85 - 1.15
+  return 0.85 + (Math.abs(h) % 100) / 100 * 0.3
+}
+
+export function computeFunnel(products: Product[]): OverallFunnel {
+  // 每个产品按主匹配画像分桶
+  const byPersonaMap = new Map<PersonaId, { count: number; weight: number }>()
+  for (const p of products) {
+    const m = calculateOverallMatch(p)
+    const pid = m.top.persona.id
+    const cur = byPersonaMap.get(pid) || { count: 0, weight: 0 }
+    cur.count += 1
+    cur.weight += m.top.score / 100
+    byPersonaMap.set(pid, cur)
   }
-  aggregate.roi = aggregate.cost > 0 ? (aggregate.revenue - aggregate.cost) / aggregate.cost : 0
-  aggregate.overallConversion = aggregate.impressions > 0 ? aggregate.converted / aggregate.impressions : 0
+
+  let totalImpressions = 0
+  let totalClicks = 0
+  let totalRecs = 0
+  let totalConv = 0
+
+  const byPersona: PersonaFunnel[] = PERSONAS.map((persona) => {
+    const bucket = byPersonaMap.get(persona.id) || { count: 0, weight: 0 }
+    const bias = hashBias(persona.id)
+    const impressions = Math.round((bucket.weight * 18000 + bucket.count * 1200) * bias)
+    const ctr = 0.18 + bias * 0.10 // 0.18-0.31
+    const clicks = Math.round(impressions * ctr)
+    const recommendRate = 0.45 + bias * 0.20 // 0.45-0.65
+    const recommendations = Math.round(clicks * recommendRate)
+    const cvr = 0.20 + bias * 0.14 // 0.20-0.34
+    const conversions = Math.round(recommendations * cvr)
+
+    totalImpressions += impressions
+    totalClicks += clicks
+    totalRecs += recommendations
+    totalConv += conversions
+
+    return {
+      personaId: persona.id,
+      label: persona.label,
+      emoji: persona.emoji,
+      color: persona.color,
+      impressions,
+      clicks,
+      recommendations,
+      conversions,
+      ctr,
+      cvr,
+      share: 0,
+      steps: [
+        { label: '曝光', count: impressions, rate: 1 },
+        { label: '点击', count: clicks, rate: ctr },
+        { label: '推荐', count: recommendations, rate: recommendRate },
+        { label: '转化', count: conversions, rate: cvr },
+      ],
+    }
+  })
+
+  // 计算 share（曝光占比）
+  for (const p of byPersona) {
+    p.share = totalImpressions > 0 ? p.impressions / totalImpressions : 0
+  }
+
+  // 按曝光降序
+  byPersona.sort((a, b) => b.impressions - a.impressions)
+
+  // 近 7 天趋势（用总推荐数 + 画像的 hash 抖动生成伪数据）
+  const trend: { date: string; recommendations: number }[] = []
+  const baseRecs = totalRecs
+  for (let i = 6; i >= 0; i -= 1) {
+    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
+    const day = `${d.getMonth() + 1}/${d.getDate()}`
+    const noise = 0.7 + ((i * 13) % 100) / 100 * 0.6 // 0.7-1.3
+    trend.push({
+      date: day,
+      recommendations: Math.round((baseRecs / 7) * noise),
+    })
+  }
 
   return {
-    product,
-    perPersona,
-    aggregate,
-    topPersonas: [...perPersona].sort((a, b) => b.revenue - a.revenue).slice(0, 3),
+    total: {
+      impressions: totalImpressions,
+      clicks: totalClicks,
+      recommendations: totalRecs,
+      conversions: totalConv,
+    },
+    byPersona,
+    trend,
   }
 }
 
 /**
- * 计算所有产品的聚合漏斗（用于商家后台顶部数据卡）
+ * 按画像聚合产品的曝光/转化 KPI
  */
-export function calculateAllProductsFunnel(): {
-  totalRevenue: number
-  totalConverted: number
-  totalImpressions: number
-  avgRoi: number
-  totalCost: number
-  products: { product: Product; funnel: ReturnType<typeof calculateProductTotalFunnel> }[]
-} {
-  // 暂时从全局 PRODUCTS 取，函数内部不依赖外部 store
-  // 注：商家后台可使用 usePromoStore 里的 userProduct + PRODUCTS 合并
-  return {
-    totalRevenue: 0,
-    totalConverted: 0,
-    totalImpressions: 0,
-    avgRoi: 0,
-    totalCost: 0,
-    products: [],
-  }
+export interface KpiCard {
+  label: string
+  value: string
+  change: string
+  flat: boolean
+}
+
+export function buildKpis(products: Product[]): KpiCard[] {
+  const f = computeFunnel(products)
+  const totalProducts = products.length
+  const liveCount = products.filter((p) => p.status === 'live' || p.id.startsWith('uploaded-')).length
+  return [
+    { label: '总曝光量', value: f.total.impressions.toLocaleString(), change: '+12.5%', flat: false },
+    {
+      label: '推荐转化率',
+      value: f.total.clicks > 0 ? `${((f.total.conversions / f.total.clicks) * 100).toFixed(1)}%` : '—',
+      change: '+3.2%',
+      flat: false,
+    },
+    {
+      label: '推荐次数',
+      value: f.total.recommendations.toLocaleString(),
+      change: '+8.1%',
+      flat: false,
+    },
+    { label: '产品上架数', value: String(totalProducts), change: liveCount > 0 ? `已上架 ${liveCount}` : '持平', flat: liveCount === 0 },
+  ]
 }

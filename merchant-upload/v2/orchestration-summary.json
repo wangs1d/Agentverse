@@ -1,0 +1,68 @@
+{
+  "project": {
+    "name": "B端产品上传",
+    "operation": "create",
+    "deviceType": "desktop",
+    "operatingMode": "library-bound",
+    "designRead": "B2B product upload website / merchant users / dark premium full-width desktop / medium-low density / cinematic dark luxury",
+    "designDials": {
+      "layoutVariance": 3,
+      "motionIntensity": 3,
+      "visualDensity": 3
+    },
+    "styleDefinitionBrief": null,
+    "styleContinuityAnchors": null,
+    "sharedProjectShellContract": null
+  },
+  "designSource": {
+    "operatingMode": "library-bound",
+    "libraryIdentity": {
+      "name": "苹果",
+      "id": "dl_builtin_apple",
+      "version": null,
+      "scope": "built-in-global",
+      "path": "c:\\Users\\Ws.LAPTOP-P2G1M5P1\\.trae-cn\\design_libraries\\dl_builtin_apple",
+      "versionSource": "metadata.json"
+    },
+    "brandCssPath": "c:\\Users\\Ws.LAPTOP-P2G1M5P1\\.trae-cn\\design_libraries\\dl_builtin_apple\\colors_and_type.css",
+    "iconAssets": {
+      "source": "assets/icons",
+      "projectIconDir": "assets/icons/dl-builtin-apple",
+      "libraryKey": "dl-builtin-apple",
+      "renderMethod": "css-mask",
+      "pathTemplate": "../assets/icons/dl-builtin-apple/{name}.svg",
+      "availableNames": ["arrow-down", "arrow-left", "arrow-right", "arrow-up", "box", "check", "chevron-down", "chevron-left", "chevron-right", "chevron-up", "circle-alert", "circle-check", "circle-minus", "circle-pause", "circle-play", "circle-plus", "circle-question-mark", "external-link", "file", "folder-open", "folder", "funnel", "grip", "heart", "house", "mail", "map-pin", "message-circle-more", "mouse-pointer-click", "pen-line", "send-horizontal", "star", "tag", "thumbs-down", "thumbs-up", "trash-2", "triangle-alert", "user"],
+      "totalCount": 42,
+      "coloringRule": "currentColor by default; override with Library token when needed"
+    }
+  },
+  "pages": [
+    {
+      "nodeId": "page-product-upload",
+      "title": "B端产品上传",
+      "htmlSrc": "pages/product-upload.html",
+      "pageIndex": 1,
+      "pageType": "task-driven",
+      "businessScenario": "B端商家上传产品信息的全屏桌面网站界面，利用全屏宽度展示，视觉层次丰富，暗色高颜值",
+      "visualNorthStar": "Apple Pro product page meets Stripe Dashboard — full-width dark surface, hero section with atmospheric background image, left narrative + right action split, sophisticated glass-morphism cards",
+      "compositionPattern": "full-width hero + asymmetric two-column body: left context/right form",
+      "continuityAnchors": [],
+      "componentPlan": [
+        { "slug": "navigation", "contractKind": "legacy-json", "why": "Full-width top nav" },
+        { "slug": "card", "contractKind": "legacy-json", "why": "Form container and info cards" },
+        { "slug": "button", "contractKind": "legacy-json", "why": "CTA buttons" },
+        { "slug": "input", "contractKind": "legacy-json", "why": "Form fields" }
+      ],
+      "imagePlan": [
+        { "usage": "hero background", "src": "assets/hero-dark-upload.jpg", "alt": "Dark atmospheric hero background" }
+      ],
+      "chartsRequired": false,
+      "miniProgramStyle": false
+    }
+  ],
+  "assets": [
+    { "type": "image", "src": "assets/hero-dark-upload.jpg", "usage": "hero background" }
+  ],
+  "wiringPlan": [],
+  "hiddenInteractionPlan": []
+}

@@ -1,19 +1,19 @@
 import { useState } from 'react'
 import { TopBar, type AppPage } from './components/TopBar'
 import { Home } from './pages/Home'
-import { Demo } from './pages/Demo'
-import { MerchantDashboard } from './pages/MerchantDashboard'
+import { ProductUpload } from './pages/ProductUpload'
+import { DataAnalytics } from './pages/DataAnalytics'
 
 function App() {
   const [page, setPage] = useState<AppPage>('home')
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="min-h-screen bg-black">
       <TopBar page={page} onPageChange={setPage} />
 
       {page === 'home' && <Home onNavigate={setPage} />}
-      {page === 'demo' && <Demo />}
-      {page === 'merchant' && <MerchantDashboard />}
+      {page === 'upload' && <ProductUpload />}
+      {page === 'analytics' && <DataAnalytics />}
     </div>
   )
 }
